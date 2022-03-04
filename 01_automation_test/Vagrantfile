@@ -1,0 +1,48 @@
+
+
+# Generic config
+
+# OS/Box
+VAGRANT_BOX = 'ubuntu/xenial64'
+# VM User — 'vagrant' by default
+VM_USER = 'vagrant'
+
+# Master config params
+VM_NAME_MASTER = 'box-master'
+MASTER_ADDRESS = '192.168.56.50' 
+MASTER_HOSTNAME = "myhost.local"
+
+Vagrant.configure(2) do |config|
+
+  # Configuration definitions for the "Master"
+  config.vm.define "master" do |master|
+
+    # Configure box type
+    master.vm.box = VAGRANT_BOX
+    master.vm.hostname = MASTER_HOSTNAME
+    
+    # Configure the Network
+    master.vm.network "private_network", ip: MASTER_ADDRESS
+
+    master.vm.provider "virtualbox" do |v|
+      v.name = VM_NAME_MASTER
+      v.memory = 2048
+      
+    end
+
+    master.vm.provision "docker" do |v|
+         v.build_image "/home/vagrant/files", args: "-t ubuntu/apache2"
+         v.run "apache2", image: "ubuntu/apache2", args: "-it -p 8080:80"
+        end
+
+    # Script provisioner for Master
+    $masterFirstBoot = <<-SCRIPT
+    systemctl restart networking
+    sudo
+    SCRIPT
+
+    master.vm.provision "shell", inline: $masterFirstBoot
+    master.vm.synced_folder ".", "/home/vagrant/files"
+  end
+
+end
